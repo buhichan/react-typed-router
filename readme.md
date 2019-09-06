@@ -1,6 +1,8 @@
 
 # React Typed Router
 
+[![Build Status](https://api.travis-ci.org/buhichan/react-typed-router.png)](https://api.travis-ci.org/buhichan/react-typed-router)
+
 ## Why
 
 Because routes should be typed by its required props. With this router, you don't have to remember each route's props anymore, they will be statically checked by the power of typescript. 
