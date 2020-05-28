@@ -10,9 +10,20 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-var rxjs_1 = require("rxjs");
 var React = require("react");
+var rxjs_1 = require("rxjs");
 function makeRoute(routeConfig, parent) {
     var res = __assign({ parent: parent || null, children: null, level: parent ? parent.level + 1 : 0, params: null }, routeConfig);
     if (parent) {
@@ -39,17 +50,17 @@ function traverseRoute(routes, visiter) {
     }
 }
 function makeRouter(history) {
-    // const history = createBrowserHistory()
     var componentMap = new Map();
     var pathToRouteMap = new Map();
     var initialQuery = {};
     new URLSearchParams(history.location.search).forEach(function (v, k) {
         initialQuery[k] = v;
     }, {});
-    var init = function (rootRoutes) {
+    var buildRouteMap = function (rootRoutes) {
         traverseRoute(rootRoutes, function (route) {
             pathToRouteMap.set(route.key, route);
-            route.component && componentMap.set(route.key, React.lazy(route.component));
+            route.component &&
+                componentMap.set(route.key, React.lazy(route.component));
             if (route.key === history.location.pathname) {
                 route$.next({
                     route: route,
@@ -100,23 +111,20 @@ function makeRouter(history) {
         if (newRoute !== route$.value.route || newQuery !== route$.value.params) {
             route$.next({
                 route: newRoute,
-                params: newQuery
+                params: newQuery,
             });
         }
     });
     function WithParams(_a) {
-        var Comp = _a.Comp, usedParams = _a.usedParams;
+        var Comp = _a.Comp;
         var _b = React.useState(route$.value.params), params = _b[0], setParams = _b[1];
         React.useEffect(function () {
             var sub = route$.subscribe(function (_a) {
                 var params = _a.params;
-                return setParams(usedParams.reduce(function (map, k) {
-                    map[k] = params[k];
-                    return map;
-                }, {}));
+                return setParams(params);
             });
             return function () { return sub.unsubscribe(); };
-        }, [usedParams]);
+        }, []);
         return React.createElement(Comp, __assign({}, params));
     }
     function useParams() {
@@ -136,6 +144,13 @@ function makeRouter(history) {
     function getRouteByKey(key) {
         return pathToRouteMap.get(key) || null;
     }
+    function Link(_a) {
+        var route = _a.route, params = _a.params, rest = __rest(_a, ["route", "params"]);
+        return (React.createElement("a", __assign({ href: createHref(route, params), onClick: function (e) {
+                e.preventDefault();
+                pushHistory(route, params);
+            } }, rest)));
+    }
     return {
         useParams: useParams,
         getParams: getParams,
@@ -145,11 +160,12 @@ function makeRouter(history) {
         route$: route$,
         history: history,
         createHref: createHref,
-        init: init,
+        buildRouteMap: buildRouteMap,
+        Link: Link,
         Router: function () {
             var _a = React.useState({
                 CurComp: null,
-                curRoute: route$.value.route
+                curRoute: route$.value.route,
             }), _b = _a[0], CurComp = _b.CurComp, curRoute = _b.curRoute, setState = _a[1];
             React.useEffect(function () {
                 var sub = route$.subscribe(function (v) {
@@ -159,25 +175,25 @@ function makeRouter(history) {
                         }
                         setState({
                             curRoute: v.route,
-                            CurComp: componentMap.get(v.route.key)
+                            CurComp: componentMap.get(v.route.key),
                         });
                     }
                     else {
                         setState({
                             curRoute: null,
-                            CurComp: null
+                            CurComp: null,
                         });
                     }
                 });
                 return function () { return sub.unsubscribe(); };
             }, []);
             if (CurComp && curRoute) {
-                return React.createElement(React.Suspense, { fallback: null }, curRoute.params ? React.createElement(WithParams, { Comp: CurComp, usedParams: curRoute.params }) : React.createElement(CurComp, null));
+                return (React.createElement(React.Suspense, { fallback: null }, curRoute.params ? React.createElement(WithParams, { Comp: CurComp }) : React.createElement(CurComp, null)));
             }
             else {
                 return null;
             }
-        }
+        },
     };
 }
 exports.makeRouter = makeRouter;
